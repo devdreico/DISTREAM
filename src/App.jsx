@@ -207,7 +207,7 @@ function ScrollHero() {
           </motion.div>
         </div>
         <div className="hero-progress" aria-hidden="true"><motion.span style={{ scaleX: scrollYProgress }} /></div>
-        <div className="hero-index"><span>SCROLL PARA SENTIRLO</span><span>0{activeWord + 1} / 04</span></div>
+        <div className="hero-index"><span>DESLIZA</span><span>0{activeWord + 1} / 04</span></div>
       </div>
     </section>
   );
