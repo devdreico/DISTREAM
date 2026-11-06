@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, Route, Routes, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { motion, useMotionValueEvent, useScroll, useTransform } from 'framer-motion';
+import { AnimatePresence, motion, useMotionValueEvent, useReducedMotion, useScroll, useTransform } from 'framer-motion';
 import {
   ArrowDown,
   ArrowLeft,
@@ -8,7 +8,6 @@ import {
   ArrowUpRight,
   Check,
   MessageCircle,
-  Menu,
   ShieldCheck,
   Sparkles,
   X,
@@ -127,62 +126,55 @@ function BrandMark({ service, size = 22 }) {
 }
 
 function Header() {
-  const [menuOpen, setMenuOpen] = useState(false);
   const location = useLocation();
-  const [mobileVisible, setMobileVisible] = useState(location.pathname !== '/');
+  const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
-    if (location.pathname !== '/') {
-      setMobileVisible(true);
-      return undefined;
-    }
+    function handleScroll() { setScrolled(window.scrollY > 24); }
+    handleScroll();
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
-    const servicesSection = document.getElementById('servicios');
-    if (!servicesSection) return undefined;
-
-    const observer = new IntersectionObserver(([entry]) => setMobileVisible(entry.isIntersecting), {
-      rootMargin: '-72px 0px 0px 0px',
-    });
-    observer.observe(servicesSection);
-    return () => observer.disconnect();
-  }, [location.pathname]);
+  const isHome = location.pathname === '/';
 
   return (
-    <header className={`site-header ${mobileVisible ? 'mobile-visible' : ''}`}>
-      <Link to="/" className="wordmark" aria-label="DISTREAM, inicio" onClick={() => setMenuOpen(false)}>
-        <span className="brand-symbol"><span /><span /><span /></span>
+    <header className={`site-header ${scrolled ? 'is-scrolled' : ''} ${isHome && !scrolled ? 'is-top' : ''}`}>
+      <Link to="/" className="wordmark" aria-label="DISTREAM, inicio">
+        <span className="brand-symbol" aria-hidden="true"><span /><span /><span /></span>
         DISTREAM<span className="wordmark-period">.</span>
       </Link>
+      <nav className="header-nav" aria-label="Navegación principal">
+        <a href="/#servicios">Servicios</a>
+        <a className="nav-cta" href="/#servicios">Ver planes <ArrowUpRight size={14} /></a>
+      </nav>
       <a className="mobile-whatsapp" href="https://wa.me/573144572008" target="_blank" rel="noreferrer" aria-label="Contactar a DISTREAM por WhatsApp al 3144572008">
         <MessageCircle size={16} /> WhatsApp
       </a>
-      <button className="mobile-menu icon-button" type="button" aria-label={menuOpen ? 'Cerrar menú' : 'Abrir menú'} onClick={() => setMenuOpen(!menuOpen)}>
-        {menuOpen ? <X size={20} /> : <Menu size={20} />}
-      </button>
-      <nav className={`header-nav ${menuOpen ? 'is-open' : ''}`} aria-label="Navegación principal">
-        <a href="/#servicios" onClick={() => setMenuOpen(false)}>Servicios</a>
-        <a className="nav-cta" href="/#servicios" onClick={() => setMenuOpen(false)}>Ver planes <ArrowUpRight size={14} /></a>
-      </nav>
     </header>
   );
 }
 
 function ScrollHero() {
   const heroRef = useRef(null);
+  const reducedMotion = useReducedMotion();
   const { scrollYProgress } = useScroll({ target: heroRef, offset: ['start start', 'end end'] });
   const haloRotation = useTransform(scrollYProgress, [0, 1], [0, 36]);
+  const haloScale = useTransform(scrollYProgress, [0, 1], [0.82, 1.08]);
+  const haloOpacity = useTransform(scrollYProgress, [0, 0.35, 1], [0.55, 0.85, 1]);
+  const footerOpacity = useTransform(scrollYProgress, [0, 0.55, 0.8, 1], [0, 0, 1, 1]);
   const [activeWord, setActiveWord] = useState(0);
   const words = ['PAGA', 'MENOS', 'POR', 'MÁS'];
 
   useMotionValueEvent(scrollYProgress, 'change', (value) => {
-    setActiveWord(Math.min(3, Math.floor(value * 4)));
+    if (!reducedMotion) setActiveWord(Math.min(3, Math.floor(value * 4)));
   });
 
   return (
     <section ref={heroRef} className="hero-scroll" aria-label="Paga menos por más">
       <div className="hero-stage">
         <div className="hero-backdrop" />
-        <motion.div className="hero-halo" style={{ scale: scrollYProgress, rotate: haloRotation }} />
+        <motion.div className="hero-halo" style={reducedMotion ? undefined : { scale: haloScale, rotate: haloRotation, opacity: haloOpacity }} />
         <div className="hero-grain" />
         <div className="hero-side-note"><span>ENTRETENIMIENTO,</span><span>A TU MANERA.</span></div>
         <div className="hero-content">
@@ -192,7 +184,7 @@ function ScrollHero() {
               <motion.div
                 key={word}
                 className={`hero-word ${index === 3 ? 'hero-word-accent' : ''} ${activeWord === index ? 'is-active' : ''}`}
-                animate={{ opacity: activeWord === index ? 1 : 0.24, x: activeWord === index ? 0 : (index % 2 ? 18 : -18) }}
+                animate={reducedMotion ? { opacity: 1, x: 0 } : { opacity: activeWord === index ? 1 : 0.24, x: activeWord === index ? 0 : (index % 2 ? 18 : -18) }}
                 transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
                 aria-hidden="true"
               >
@@ -201,7 +193,7 @@ function ScrollHero() {
               </motion.div>
             ))}
           </div>
-          <motion.div className="hero-footer" style={{ opacity: scrollYProgress }}>
+          <motion.div className="hero-footer" style={reducedMotion ? undefined : { opacity: footerOpacity }}>
             <p>Un mes de lo que amas.<br /><strong>Hasta {getMaximumDiscount().toLocaleString('es-CO', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}% menos.</strong></p>
             <a href="#servicios" className="hero-scroll-link">Explora los servicios <ArrowDown size={16} /></a>
           </motion.div>
@@ -228,7 +220,8 @@ function ServiceCard({ service, index }) {
       transition={{ duration: 0.55, delay: (index % 2) * 0.08, ease: [0.22, 1, 0.36, 1] }}
     >
       <Link to={detailUrl} className="service-card-link" aria-label={`Ver ${service.name}, ${term === 'year' ? 'Premium 1 Año' : 'Premium 1 Mes'}`}>
-        <div className="service-image" style={{ backgroundImage: `url(https://images.unsplash.com/${service.image}?auto=format&fit=crop&w=1200&q=85)` }}>
+        <div className="service-image">
+          <div className="service-image-bg" style={{ backgroundImage: `url(https://images.unsplash.com/${service.image}?auto=format&fit=crop&w=1200&q=85)` }} aria-hidden="true" />
           <div className="service-image-shade" />
           <span className="service-category">{service.category}</span>
           <span className="service-image-icon" style={{ color: service.color }}><BrandMark service={service} size={28} /></span>
@@ -257,7 +250,7 @@ function ServiceCard({ service, index }) {
 function ServicesSection() {
   return (
     <section className="services-section" id="servicios">
-      <div className="section-topline"><span>01 — ELIGE TU PRÓXIMA SESIÓN</span><span>10 EXPERIENCIAS</span></div>
+      <div className="section-topline"><span>01 — ELIGE TU PRÓXIMA SESIÓN</span><span>{services.length} EXPERIENCIAS</span></div>
       <div className="services-heading-row">
         <h2>Una suscripción.<br /><em>Más para disfrutar.</em></h2>
         <p>Elige tu plataforma y duración.<br />Precios y ahorros en COP.</p>
@@ -271,17 +264,59 @@ function ServicesSection() {
 }
 
 function Footer() {
+  const year = new Date().getFullYear();
   return (
     <footer className="site-footer">
-      <Link to="/" className="wordmark"><span className="brand-symbol"><span /><span /><span /></span>DISTREAM<span className="wordmark-period">.</span></Link>
-      <span>Tu entretenimiento. A otro precio.</span>
-      <a href="https://wa.me/573144572008" target="_blank" rel="noreferrer"><MessageCircle size={14} /> WhatsApp</a>
+      <div className="footer-brand">
+        <Link to="/" className="wordmark"><span className="brand-symbol" aria-hidden="true"><span /><span /><span /></span>DISTREAM<span className="wordmark-period">.</span></Link>
+        <span>Tu entretenimiento. A otro precio.</span>
+      </div>
+      <nav className="footer-nav" aria-label="Pie de página">
+        <a href="/#servicios">Servicios</a>
+        <a href="https://wa.me/573144572008" target="_blank" rel="noreferrer"><MessageCircle size={14} /> WhatsApp</a>
+      </nav>
+      <span className="footer-copy">© {year} DISTREAM · Precios en COP</span>
     </footer>
   );
 }
 
+function HowItWorks() {
+  const steps = [
+    { n: '01', title: 'Solicita', body: 'Elige tu plataforma y duración, completa el formulario con tu correo y WhatsApp.' },
+    { n: '02', title: 'Te confirmamos', body: 'Te contactamos por WhatsApp con la confirmación y los medios de pago.' },
+    { n: '03', title: 'Disfrutas', body: 'Desde la confirmación, tienes 24 horas para pagar y tu premium queda activo.' },
+  ];
+
+  return (
+    <section className="how-section" aria-labelledby="how-title">
+      <div className="section-topline"><span>02 — CÓMO FUNCIONA</span><span>3 PASOS</span></div>
+      <div className="how-layout">
+        <div className="how-title-wrap">
+          <span className="how-stamp"><Sparkles size={12} /> SIMPLE, RÁPIDO, SEGURO</span>
+          <h2 id="how-title">Tres pasos.<br /><em>Cero complicaciones.</em></h2>
+          <p>De la elección al estreno, sin esperas ni trámites. Nosotros gestionamos el acceso, tú solo disfrutas.</p>
+          <a className="hero-scroll-link" href="#servicios" style={{ marginTop: 26 }}>Empieza ahora <ArrowDown size={15} /></a>
+        </div>
+        <div className="steps-list">
+          {steps.map((step) => (
+            <div className="step-row" key={step.n}>
+              <span className="step-number">{step.n}</span>
+              <div>
+                <h3>{step.title}</h3>
+                <p>{step.body}</p>
+              </div>
+              <span className="step-arrow"><ArrowRight size={16} /></span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function HomePage() {
-  return <><Header /><main><ScrollHero /><ServicesSection /></main><Footer /></>;
+  useEffect(() => { document.title = 'DISTREAM — Paga menos por más'; }, []);
+  return <><Header /><main><ScrollHero /><ServicesSection /><HowItWorks /></main><Footer /></>;
 }
 
 function RequestModal({ service, term, onClose }) {
@@ -290,6 +325,19 @@ function RequestModal({ service, term, onClose }) {
   const [submissionError, setSubmissionError] = useState('');
   const [form, setForm] = useState({ name: '', email: '', account: '', whatsapp: '' });
   const planLabel = term === 'year' ? 'Premium 1 Año' : 'Premium 1 Mes';
+
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    function handleKeyDown(event) {
+      if (event.key === 'Escape' && !isSubmitting) onClose();
+    }
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isSubmitting, onClose]);
 
   function updateForm(event) {
     setForm({ ...form, [event.target.name]: event.target.value });
@@ -327,15 +375,15 @@ function RequestModal({ service, term, onClose }) {
   }
 
   return (
-    <div className="modal-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
-      <motion.section className="request-modal" role="dialog" aria-modal="true" aria-labelledby="request-title" initial={{ opacity: 0, y: 16, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }}>
+    <div className="modal-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && !isSubmitting && onClose()}>
+      <motion.section className="request-modal" role="dialog" aria-modal="true" aria-labelledby="request-title" aria-describedby="request-copy" initial={{ opacity: 0, y: 16, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 16, scale: 0.98 }} transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}>
         <button className="modal-close icon-button" type="button" aria-label="Cerrar" onClick={onClose}><X size={19} /></button>
         {!submitted ? <>
           <span className="modal-eyebrow"><span style={{ color: service.color }}><BrandMark service={service} /></span> SOLICITUD · {service.name.toUpperCase()} · {planLabel.toUpperCase()}</span>
           <h2 id="request-title">Tu {term === 'year' ? 'próximo año' : 'próximo mes'}<br /><em>empieza aquí.</em></h2>
-          <p className="modal-copy">Déjanos estos datos para preparar tu acceso. Nunca compartas una contraseña.</p>
+          <p id="request-copy" className="modal-copy">Déjanos estos datos para preparar tu acceso. Nunca compartas una contraseña.</p>
           <form className="request-form" onSubmit={handleSubmit}>
-            <label>¿Cómo te llamas?<input required name="name" autoComplete="name" placeholder="Tu nombre" value={form.name} onChange={updateForm} /></label>
+            <label>¿Cómo te llamas?<input required name="name" autoFocus autoComplete="name" placeholder="Tu nombre" value={form.name} onChange={updateForm} /></label>
             <label>Tu correo electrónico<input required type="email" name="email" autoComplete="email" placeholder="tu@email.com" value={form.email} onChange={updateForm} /></label>
             <label>{service.account}<input required name="account" placeholder={service.accountPlaceholder} value={form.account} onChange={updateForm} /></label>
             <label>WhatsApp de contacto<input required type="tel" name="whatsapp" autoComplete="tel" placeholder="+00 000 000 0000" value={form.whatsapp} onChange={updateForm} /></label>
@@ -366,6 +414,11 @@ function ServicePage() {
   const term = searchParams.get('term') === 'year' ? 'year' : 'month';
   const planLabel = term === 'year' ? 'Premium 1 Año' : 'Premium 1 Mes';
   const offer = service?.offers?.[term];
+  const serviceIndex = service ? services.indexOf(service) + 1 : 0;
+
+  useEffect(() => {
+    document.title = service ? `${service.name} — DISTREAM` : 'DISTREAM';
+  }, [service]);
 
   if (!service) return <><Header /><main className="not-found"><h1>No encontramos ese servicio.</h1><Link className="button-primary" to="/">Volver al inicio <ArrowRight size={16} /></Link></main></>;
 
@@ -374,10 +427,10 @@ function ServicePage() {
     <main className="detail-page" style={{ '--service-color': service.color }}>
       <div className="detail-cover" style={{ backgroundImage: `url(https://images.unsplash.com/${service.image}?auto=format&fit=crop&w=2000&q=90)` }}>
         <div className="detail-cover-overlay" />
-        <button className="back-link" type="button" onClick={() => navigate(-1)}><ArrowLeft size={16} /> Volver</button>
+        <button className="back-link" type="button" onClick={() => (window.history.length > 1 ? navigate(-1) : navigate('/'))}><ArrowLeft size={16} /> Volver</button>
         <span className="detail-cover-index">DISTREAM ORIGINALS&nbsp;&nbsp; / &nbsp;&nbsp;{service.category}</span>
         <div className="detail-brand"><BrandMark service={service} size={33} /><span>{service.name}</span></div>
-        <div className="detail-cover-bottom"><span>{planLabel.toUpperCase()}</span><span>01 / 10</span></div>
+        <div className="detail-cover-bottom"><span>{planLabel.toUpperCase()}</span><span>{String(serviceIndex).padStart(2, '0')} / {String(services.length).padStart(2, '0')}</span></div>
       </div>
       <section className="detail-content">
         <div className="detail-copy">
@@ -413,10 +466,20 @@ function ServicePage() {
       </section>
     </main>
     <Footer />
-    {modalOpen && <RequestModal service={service} term={term} onClose={() => setModalOpen(false)} />}
+    <AnimatePresence>{modalOpen && <RequestModal service={service} term={term} onClose={() => setModalOpen(false)} />}</AnimatePresence>
   </>;
 }
 
+function NotFoundPage() {
+  return <><Header /><main className="not-found"><h1>No encontramos esa página.</h1><Link className="button-primary" to="/">Volver al inicio <ArrowRight size={16} /></Link></main><Footer /></>;
+}
+
+function ScrollToTop() {
+  const location = useLocation();
+  useEffect(() => { window.scrollTo({ top: 0, left: 0, behavior: 'auto' }); }, [location.pathname]);
+  return null;
+}
+
 export default function App() {
-  return <Routes><Route path="/" element={<HomePage />} /><Route path="/servicio/:slug" element={<ServicePage />} /></Routes>;
+  return <><ScrollToTop /><Routes><Route path="/" element={<HomePage />} /><Route path="/servicio/:slug" element={<ServicePage />} /><Route path="*" element={<NotFoundPage />} /></Routes></>;
 }
