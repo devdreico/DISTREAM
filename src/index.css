@@ -150,6 +150,7 @@ button { color: inherit; }
 .button-primary, .button-secondary { display: inline-flex; min-height: 46px; align-items: center; justify-content: center; gap: 12px; border: 1px solid transparent; border-radius: 6px; color: #130f18; background: #e6d9fc; cursor: pointer; font-size: 12px; font-weight: 700; transition: background .2s ease, transform .2s ease; }
 .button-primary { width: 100%; }
 .button-primary:hover, .button-secondary:hover { transform: translateY(-2px); background: #f3ebff; }
+.button-primary:disabled { opacity: .7; cursor: progress; }
 .detail-payment-note { display: flex; justify-content: center; align-items: center; gap: 7px; margin-top: 15px; color: #b2a7b8; font-size: 9px; }
 .detail-payment-note svg { color: #b99df1; }
 .detail-process { padding: 59px 7.2% 88px; }
@@ -175,6 +176,7 @@ button { color: inherit; }
 .request-form input:focus { border-color: #bda0f0; background: rgba(255,255,255,.07); }
 .form-privacy { display: flex; align-items: center; gap: 7px; margin: 2px 0 0; color: #a79cae; font-size: 9px; }
 .form-privacy svg { flex: 0 0 auto; color: #bea2f5; }
+.form-error { margin: 0; color: #ff9aab; font-size: 10px; line-height: 1.6; }
 .form-submit { margin-top: 2px; }
 .request-success { display: flex; min-height: 380px; flex-direction: column; align-items: flex-start; justify-content: center; }
 .success-icon { display: grid; width: 45px; height: 45px; place-items: center; margin-bottom: 25px; border: 1px solid rgba(186,154,239,.35); border-radius: 50%; color: #d7c4ff; background: rgba(168,134,255,.12); }

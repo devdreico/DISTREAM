@@ -23,6 +23,8 @@ import {
   siYoutube,
 } from 'simple-icons';
 
+const FORMSPREE_ENDPOINT = 'https://formspree.io/f/mzeeqdjq';
+
 const services = [
   {
     slug: 'youtube-premium', name: 'YouTube Premium', short: 'YouTube', icon: siYoutube,
@@ -284,6 +286,8 @@ function HomePage() {
 
 function RequestModal({ service, term, onClose }) {
   const [submitted, setSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submissionError, setSubmissionError] = useState('');
   const [form, setForm] = useState({ name: '', email: '', account: '', whatsapp: '' });
   const planLabel = term === 'year' ? 'Premium 1 Año' : 'Premium 1 Mes';
 
@@ -291,9 +295,35 @@ function RequestModal({ service, term, onClose }) {
     setForm({ ...form, [event.target.name]: event.target.value });
   }
 
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault();
-    setSubmitted(true);
+    setIsSubmitting(true);
+    setSubmissionError('');
+
+    const submission = new FormData(event.currentTarget);
+    submission.set('service', service.name);
+    submission.set('plan', planLabel);
+    submission.set('_subject', `Solicitud DISTREAM: ${service.name} · ${planLabel}`);
+
+    try {
+      const response = await fetch(FORMSPREE_ENDPOINT, {
+        method: 'POST',
+        body: submission,
+        headers: { Accept: 'application/json' },
+      });
+
+      if (!response.ok) {
+        const result = await response.json().catch(() => null);
+        const message = result?.errors?.map((error) => error.message).join(' ');
+        throw new Error(message || 'No pudimos enviar tu solicitud. Inténtalo nuevamente.');
+      }
+
+      setSubmitted(true);
+    } catch (error) {
+      setSubmissionError(error instanceof Error ? error.message : 'No pudimos enviar tu solicitud. Inténtalo nuevamente.');
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   return (
@@ -309,8 +339,11 @@ function RequestModal({ service, term, onClose }) {
             <label>Tu correo electrónico<input required type="email" name="email" autoComplete="email" placeholder="tu@email.com" value={form.email} onChange={updateForm} /></label>
             <label>{service.account}<input required name="account" placeholder={service.accountPlaceholder} value={form.account} onChange={updateForm} /></label>
             <label>WhatsApp de contacto<input required type="tel" name="whatsapp" autoComplete="tel" placeholder="+00 000 000 0000" value={form.whatsapp} onChange={updateForm} /></label>
-            <p className="form-privacy"><ShieldCheck size={14} /> Solo necesitamos tu correo o usuario. No solicitamos contraseñas.</p>
-            <button className="button-primary form-submit" type="submit">Obtener Premium <ArrowRight size={17} /></button>
+            <p className="form-privacy"><ShieldCheck size={14} /> Tus datos se enviarán a DISTREAM mediante Formspree. No incluyas contraseñas.</p>
+            {submissionError && <p className="form-error" role="alert">{submissionError}</p>}
+            <button className="button-primary form-submit" type="submit" disabled={isSubmitting} aria-busy={isSubmitting}>
+              {isSubmitting ? 'Enviando solicitud...' : 'Obtener Premium'} <ArrowRight size={17} />
+            </button>
           </form>
         </> : <div className="request-success">
           <span className="success-icon"><Check size={24} /></span>
